@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go SQL Console</title>
+    <style>
+        html {
+            height: 100%;
+        }
+        body {
+            margin: 0;
+            height: 100%;
+        }
+        #container {
+            height: calc(100% - 50px);
+            display: flex;
+            gap: 20px;
+        }
+        #container > * {
+            flex: 1;
+            overflow-y: auto;
+        }
+        #editor {
+            height: 100%;
+        }
+        button {
+            margin: 10px;
+        }
+
+        #results h4 {
+            display: inline-block;
+        }
+
+        #results ul {
+            font-size: 12px;
+            max-width: 100%;
+            max-height: 200px;
+            overflow: auto;
+        }
+
+        table.result-table {
+            display: block;
+            max-width: 100%;
+            max-height: 200px;
+            border-collapse: collapse;
+            font-size: 12px;
+            overflow: auto;
+        }
+
+        table.result-table > tr:first-child {
+            position: sticky;
+        }
+
+        table.result-table th, table.result-table td {
+            padding: 5px;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div id="editor"></div>
+        <div id="results">
+            <h3>Tables</h3>
+            <pre>
+            TODO
+            </pre>
+        </div>
+    </div>
+    <button id="submit-btn">Submit</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.min.js"></script>
+    <script>
+        let editor = ace.edit("editor");
+        ace.config.set('basePath', 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/')
+        // editor.setTheme("ace/theme/monokai");
+        editor.session.setMode("ace/mode/sql");
+        document.getElementById('submit-btn').addEventListener('click', async function(){
+            let query = editor.getValue();
+            let results = document.getElementById('results');
+
+            let header = document.createElement("h4");
+            header.innerHTML = query;
+
+            let timestamp = document.createElement('p');
+            timestamp.style.float = "right";
+            timestamp.innerHTML = (new Date).toLocaleTimeString();
+
+            results.append(document.createElement('hr'), header, timestamp);
+            results.scrollTop = results.scrollHeight;
+
+            let body = new FormData();
+            body.append('query', query);
+            let response = await fetch(window.location.href, {
+                method: 'POST',
+                body: body,
+            });
+            let resultObject = await response.json();
+
+            let result;
+            if (resultObject.Columns.length == 1) {
+                if (resultObject.Rows.length == 1) {
+                    result = document.createElement("pre");
+                    result.innerHTML = resultObject.Rows[0][0];
+                } else {
+                    result = document.createElement('ul');
+                    for (let rowData of resultObject.Rows) {
+                        let row = document.createElement('li');
+                        row.innerHTML = rowData[0];
+                        result.appendChild(row);
+                    }
+                }
+            } else {
+                result = document.createElement('table');
+                result.classList.add('result-table');
+                let thead = document.createElement('tr');
+                for (let column of resultObject.Columns) {
+                    let th = document.createElement('th');
+                    th.innerHTML = column;
+                    thead.appendChild(th);
+                }
+                result.append(thead);
+                for (let row of resultObject.Rows) {
+                    let tr = document.createElement('tr');
+                    for (let column of row) {
+                        let td = document.createElement('td');
+                        td.innerHTML = column;
+                        tr.appendChild(td);
+                    }
+                    result.append(tr);
+                }
+            }
+            results.append(result);
+            results.scrollTop = results.scrollHeight;
+        });
+    </script>
+</body>
+
+</html>
